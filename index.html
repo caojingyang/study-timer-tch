@@ -1,0 +1,2531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>高二（13）班晚自习系统教师端</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            padding-bottom: 2rem;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 1.5rem;
+            padding: 1rem 0;
+        }
+
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            line-height: 1.4;
+        }
+
+        /* 主菜单 */
+        .main-menu { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; }
+        .menu-btn { width: 80%; max-width: 400px; padding: 1.2rem; border: none; border-radius: 1rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-bottom: 1rem; font-family: inherit; }
+        .menu-btn:active { transform: scale(0.97); }
+        .menu-btn.btn-schedule { background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; box-shadow: 0 4px 12px rgba(236,72,153,0.4); }
+        .menu-btn.btn-notify { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; box-shadow: 0 4px 12px rgba(118,75,162,0.4); }
+
+        /* 视图切换 */
+        .view-container { display: none; }
+        .view-container.active { display: block; }
+
+        /* 返回按钮 */
+        .back-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.5rem 1rem; border: 2px solid #e2e8f0; border-radius: 0.75rem; background: #fff; color: #555; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-bottom: 1rem; }
+        .back-btn:active { transform: scale(0.95); }
+
+        /* 时间表表格 */
+        .schedule-table { width: 100%; border-collapse: separate; border-spacing: 0 0.4rem; }
+        .schedule-table th { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-align: left; padding: 0 0.5rem; }
+        .schedule-table td { font-size: 0.85rem; color: #333; padding: 0.6rem 0.5rem; white-space: nowrap; }
+        .schedule-row { background: #fff; border-radius: 0.75rem; }
+        .schedule-row td:first-child { border-radius: 0.75rem 0 0 0.75rem; }
+        .schedule-row td:last-child { border-radius: 0 0.75rem 0.75rem 0; }
+        .schedule-loading { text-align: center; color: #94a3b8; padding: 3rem 0; font-size: 0.95rem; }
+
+        .card {
+            background: #fff;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .card-title .icon {
+            font-size: 1.1rem;
+        }
+
+        .input-group {
+            margin-bottom: 0.8rem;
+        }
+
+        .input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .input-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            color: #333;
+            transition: border-color 0.2s;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .text-input:focus {
+            border-color: #764ba2;
+        }
+
+        textarea.text-input {
+            min-height: 120px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        /* 科目选择 */
+        .subject-group {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .subject-btn {
+            padding: 0.45rem 0.8rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.6rem;
+            background: #f8fafc;
+            color: #555;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .subject-btn.active {
+            border-color: #764ba2;
+            background: #f3f0ff;
+            color: #764ba2;
+        }
+
+        .subject-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 优先级选择 */
+        .priority-group {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .priority-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 0.55rem 0.4rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.6rem;
+            background: #f8fafc;
+            color: #555;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .priority-btn.active {
+            border-color: #764ba2;
+            background: #f3f0ff;
+            color: #764ba2;
+        }
+
+        .priority-btn:active {
+            transform: scale(0.95);
+        }
+
+        .priority-btn .p-icon {
+            font-size: 1.15rem;
+            display: block;
+            margin-bottom: 0.1rem;
+        }
+
+        .priority-btn .p-label {
+            font-size: 0.72rem;
+            font-weight: 400;
+            color: #94a3b8;
+        }
+
+        /* 附件上传 */
+        .attach-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+            position: relative;
+        }
+
+        .attach-area:active {
+            border-color: #764ba2;
+            background: #f3f0ff;
+        }
+
+        .attach-area .attach-icon {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        .attach-area .attach-text {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .attach-area .attach-hint {
+            font-size: 0.72rem;
+            color: #9ca3af;
+            margin-top: 0.2rem;
+        }
+
+        .attach-preview {
+            margin-top: 0.8rem;
+            display: none;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .attach-preview.show {
+            display: block;
+        }
+
+        .attach-preview-img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 0.5rem;
+            object-fit: contain;
+        }
+
+        .attach-preview-file {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 0.8rem;
+            background: #f1f5f9;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .attach-preview-file .file-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .attach-preview-file .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .attach-preview-file .file-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #333;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .attach-preview-file .file-size {
+            font-size: 0.72rem;
+            color: #94a3b8;
+        }
+
+        .attach-remove-btn {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .attach-remove-btn:active {
+            transform: scale(0.9);
+        }
+
+        #attachInput {
+            display: none;
+        }
+
+        /* 发送按钮 */
+        .send-btn {
+            width: 100%;
+            padding: 0.9rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(118, 75, 162, 0.4);
+            letter-spacing: 0.05em;
+            font-family: inherit;
+        }
+
+        .send-btn:active {
+            transform: scale(0.97);
+            box-shadow: 0 2px 6px rgba(118, 75, 162, 0.3);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 状态栏 */
+        .status-bar {
+            text-align: center;
+            padding: 0.6rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.8rem;
+            display: none;
+        }
+
+        .status-bar.success {
+            display: block;
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .status-bar.error {
+            display: block;
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .status-bar.sending {
+            display: block;
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        /* 数据库状态提示 */
+        .db-status-toast {
+            position: fixed;
+            top: 0.6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99999;
+            pointer-events: none;
+            max-width: 90vw;
+        }
+        .db-status-toast-inner {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.5rem 0.85rem;
+            border-radius: 0.6rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #fff;
+            background: rgba(30, 41, 59, 0.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            opacity: 0;
+            transform: translateY(-0.5rem);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            pointer-events: auto;
+        }
+        .db-status-toast-inner.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .db-status-dot {
+            width: 0.6rem;
+            height: 0.6rem;
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: dbPulse 1s ease-in-out infinite;
+        }
+        .db-status-dot.reading { background: #3b82f6; }
+        .db-status-dot.writing { background: #f59e0b; }
+        .db-status-dot.success { background: #22c55e; animation: none; }
+        .db-status-dot.error { background: #ef4444; animation: none; }
+        @keyframes dbPulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.85); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        .db-status-icon {
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .db-status-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70vw;
+        }
+        .db-status-toast-inner.success { background: rgba(22, 163, 74, 0.92); }
+        .db-status-toast-inner.error { background: rgba(220, 38, 38, 0.92); }
+
+        /* 修改请求卡片 */
+        .modify-request-card {
+            background: #fff7ed;
+            border: 1px solid #fdba74;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.6rem;
+        }
+        .modify-request-card .mr-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .modify-request-card .mr-date {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #c2410c;
+        }
+        .modify-request-card .mr-subjects {
+            font-size: 0.8rem;
+            color: #7c2d12;
+            margin-bottom: 0.5rem;
+        }
+        .modify-request-card .mr-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .modify-request-card .mr-actions button {
+            flex: 1;
+            padding: 0.4rem 0.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .mr-btn-approve {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #fff;
+        }
+        .mr-btn-ignore {
+            background: #e2e8f0;
+            color: #555;
+        }
+
+        /* 发送历史 */
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .history-body {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.2rem;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .history-attach {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            color: #6366f1;
+            margin-top: 0.2rem;
+        }
+
+        .history-time {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.2rem;
+        }
+
+        .history-priority {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.3rem;
+            font-weight: 600;
+        }
+
+        .priority-urgent { background: #fef2f2; color: #dc2626; }
+        .priority-high { background: #fff7ed; color: #ea580c; }
+        .priority-default { background: #f0f9ff; color: #0284c7; }
+        .priority-low { background: #f8fafc; color: #94a3b8; }
+
+        .empty-history {
+            text-align: center;
+            color: #cbd5e1;
+            padding: 2rem 0;
+            font-size: 0.9rem;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 协议警告 */
+        .protocol-warning {
+            background: #fef3c7;
+            border: 1.5px solid #f59e0b;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            color: #92400e;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .hidden { display: none !important; }
+
+        /* 更新历史按钮 */
+        .changelog-btn {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            z-index: 10;
+        }
+        .changelog-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.55);
+        }
+        /* 版本号标注 */
+        .version-label {
+            position: fixed;
+            bottom: 1.6rem;
+            right: 1.5rem;
+            font-size: 0.7rem;
+            color: #9ca3af;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .changelog-btn:active {
+            transform: scale(0.95);
+        }
+        /* 问题反馈按钮 */
+        .feedback-btn {
+            position: fixed;
+            bottom: 3.2rem;
+            right: 1.5rem;
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.4rem 0.9rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4);
+            z-index: 10;
+            text-decoration: none;
+        }
+        .feedback-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(234, 88, 12, 0.55);
+        }
+        /* 更新历史弹窗 */
+        .changelog-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .changelog-overlay:not(.hidden) {
+            display: flex;
+        }
+        .changelog-panel {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 1rem;
+            padding: 0 2rem 1.5rem;
+            max-width: 42rem;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.3);
+            animation: popupScaleIn 0.3s ease-out;
+            position: relative;
+        }
+        .changelog-panel h2 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #1f2937;
+            margin: 0 -2rem 1rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.97);
+            padding: 1.2rem 2rem 0.6rem;
+            z-index: 1;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .changelog-panel h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #2563eb;
+            margin-top: 1rem;
+            margin-bottom: 0.3rem;
+        }
+        .changelog-panel h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #3b82f6;
+            margin-top: 0.6rem;
+            margin-bottom: 0.2rem;
+        }
+        .changelog-panel ul {
+            margin: 0.3rem 0 0.6rem 1.2rem;
+            padding: 0;
+        }
+        .changelog-panel li {
+            font-size: 0.85rem;
+            color: #4b5563;
+            margin-bottom: 0.2rem;
+            line-height: 1.5;
+        }
+        .changelog-close {
+            position: static;
+            margin-left: auto;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #6b7280;
+            cursor: pointer;
+            z-index: 2;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .changelog-close:hover {
+            color: #374151;
+        }
+
+        .protocol-warning:not(.hidden) {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        #modifyTimeModal:not(.hidden) {
+            display: flex !important;
+        }
+
+        .protocol-warning .warn-icon {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .protocol-warning code {
+            background: rgba(0,0,0,0.08);
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        .upload-progress { margin-top: 0.8rem; padding: 0.8rem; background: #f8fafc; border-radius: 0.5rem; }
+        .upload-progress-bar { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .upload-progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px; width: 0%; transition: width 0.3s; }
+        .upload-progress-text { font-size: 0.85rem; font-weight: 600; color: #555; margin-top: 0.4rem; }
+        .upload-progress-eta { font-size: 0.75rem; color: #94a3b8; margin-top: 0.15rem; }
+        .attach-card-status { font-size: 0.75rem; margin-top: 0.3rem; font-weight: 600; }
+        .attach-card-progress-bar { width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 0.3rem; overflow: hidden; }
+        .attach-card-progress-fill { height: 100%; background: #3b82f6; border-radius: 2px; transition: width 0.2s; }
+        .status-uploading { color: #3b82f6; }
+        .status-done { color: #16a34a; }
+        .status-error { color: #ef4444; }
+        .status-pending { color: #94a3b8; }
+
+        /* ========== 用户系统 ========== */
+        .user-bar {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            z-index: 200;
+        }
+        .user-bar span {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.8rem;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .user-bar .btn-sm {
+            padding: 0.3rem 0.7rem;
+            font-size: 0.75rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-login { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(8px); }
+        .btn-login:hover { background: rgba(255,255,255,0.35); }
+        .btn-logout { background: rgba(239,68,68,0.8); color: white; }
+        .btn-logout:hover { background: rgba(239,68,68,1); }
+
+        /* 用户弹窗 */
+        .auth-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            z-index: 400;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-overlay:not(.hidden) { display: flex; }
+        .auth-panel {
+            background: rgba(255,255,255,0.97);
+            border-radius: 1rem;
+            padding: 1.5rem 2rem;
+            max-width: 24rem;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .auth-panel h3 {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #1f2937;
+            font-size: 1.2rem;
+        }
+        .auth-panel .form-group {
+            margin-bottom: 0.8rem;
+        }
+        .auth-panel label {
+            display: block;
+            font-size: 0.8rem;
+            color: #4b5563;
+            margin-bottom: 0.25rem;
+        }
+        .auth-panel input, .auth-panel select {
+            width: 100%;
+            padding: 0.55rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .auth-panel input:focus, .auth-panel select:focus {
+            border-color: #3b82f6;
+        }
+        .auth-panel .btn-primary {
+            width: 100%;
+            padding: 0.6rem;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        .auth-panel .btn-primary:hover { opacity: 0.9; }
+        .auth-panel .btn-text {
+            background: none;
+            border: none;
+            color: #3b82f6;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .auth-panel .msg {
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 0.5rem;
+            min-height: 1.2rem;
+        }
+        .auth-panel .msg.error { color: #ef4444; }
+        .auth-panel .msg.success { color: #16a34a; }
+        /* 强制登录遮罩 */
+        .main-content { position: relative; }
+        .main-content.locked::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            z-index: 300;
+            border-radius: 1rem;
+        }
+        .main-content.locked * { pointer-events: none; }
+    </style>
+</head>
+<body>
+    <!-- 用户信息栏 -->
+    <div class="user-bar" id="userBar">
+        <span id="userInfo"></span>
+        <button class="btn-sm btn-login" id="btnLogin" onclick="showAuth('login')">登录</button>
+        <button class="btn-sm btn-logout hidden" id="btnLogout" onclick="doLogout()">退出</button>
+    </div>
+
+    <!-- 页面头部标题 -->
+    <div class="header">
+        <h1><img src="icon.jpg" alt="" style="height:2.4em;vertical-align:middle;margin-right:0.4em;">高二（13）班晚自习系统教师端</h1>
+    </div>
+
+    <!-- 登录/注册弹窗 -->
+    <div class="auth-overlay hidden" id="authOverlay">
+        <div class="auth-panel" id="authPanel">
+            <!-- 登录表单 -->
+            <div id="loginForm">
+                <h3>🔐 教师登录</h3>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="loginUsername" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" placeholder="请输入密码">
+                </div>
+                <button class="btn-primary" onclick="doLogin()">登录</button>
+                <div style="text-align:center;margin-top:0.6rem;">
+                    <button class="btn-text" onclick="showAuth('register')">没有账号？去注册</button>
+                    <span style="color:#9ca3af;margin:0 0.3rem;">|</span>
+                    <button class="btn-text" onclick="showAuth('recover')">忘记密码</button>
+                </div>
+                <div class="msg" id="loginMsg"></div>
+            </div>
+            <!-- 注册表单 -->
+            <div id="registerForm" class="hidden">
+                <h3>📝 教师注册</h3>
+                <div class="form-group">
+                    <label>用户名 *</label>
+                    <input type="text" id="regUsername" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>邮箱（选填）</label>
+                    <input type="email" id="regEmail" placeholder="用于密码找回">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="regPassword" placeholder="至少6位">
+                </div>
+                <div class="form-group">
+                    <label>任教学科</label>
+                    <select id="regSubject">
+                        <option value="">请选择学科</option>
+                        <option value="语文">语文</option>
+                        <option value="数学">数学</option>
+                        <option value="英语">英语</option>
+                        <option value="化学">化学</option>
+                        <option value="生物">生物</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="doRegister()">注册</button>
+                <div style="text-align:center;margin-top:0.6rem;">
+                    <button class="btn-text" onclick="showAuth('login')">已有账号？去登录</button>
+                </div>
+                <div class="msg" id="regMsg"></div>
+            </div>
+            <!-- 密码找回表单 -->
+            <div id="recoverForm" class="hidden">
+                <h3>🔑 密码找回</h3>
+                <p style="font-size:0.8rem;color:#6b7280;text-align:center;margin-bottom:0.8rem;">输入注册邮箱，系统将发送重置密码链接</p>
+                <div class="form-group">
+                    <label>邮箱</label>
+                    <input type="email" id="recEmail" placeholder="teacher@example.com">
+                </div>
+                <button class="btn-primary" onclick="doRecover()">发送重置链接</button>
+                <div style="text-align:center;margin-top:0.6rem;">
+                    <button class="btn-text" onclick="showAuth('login')">返回登录</button>
+                </div>
+                <div class="msg" id="recMsg"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content locked" id="mainContent">
+
+    <!-- 主菜单 -->
+    <div id="mainMenu" class="main-menu">
+        <button class="menu-btn btn-schedule" onclick="showView('scheduleView')">📋 查看晚自习作业时间表</button>
+        <button class="menu-btn btn-notify" onclick="showView('notifyView')">📤 发送通知至晚自习系统</button>
+    </div>
+
+    <!-- 数据库状态提示 -->
+    <div class="db-status-toast" id="dbStatusToast">
+        <div class="db-status-toast-inner" id="dbStatusInner">
+            <div class="db-status-dot reading" id="dbStatusDot"></div>
+            <span class="db-status-icon" id="dbStatusIcon"></span>
+            <span class="db-status-text" id="dbStatusText"></span>
+        </div>
+    </div>
+
+    <!-- 作业时间表视图 -->
+    <div id="scheduleView" class="view-container">
+        <button class="back-btn" onclick="showMainMenu()">← 返回</button>
+        <div class="card">
+            <div class="card-title" style="font-size:0.82rem;">
+                <img src="icon.jpg" alt="" style="height:1.2em;vertical-align:middle;margin-right:0.3em;">
+                <span id="scheduleTitle">高二（13）班晚自习作业时间表</span>
+            </div>
+            <div id="scheduleContent">
+                <div class="schedule-loading">等待晚自习系统发送作业时间表…</div>
+            </div>
+            <div style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
+                <button class="back-btn" onclick="openModifyTimeModal()" style="margin-bottom:0;">⏱️ 更改时间</button>
+                <button onclick="saveScheduleToDB()" style="padding:0.6rem 1rem;border:none;border-radius:0.5rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-weight:700;cursor:pointer;font-size:0.85rem;">💾 保存至数据库</button>
+            </div>
+            <div class="status-bar" id="scheduleStatusBar"></div>
+        </div>
+
+        <!-- 待处理修改请求区域 -->
+        <div class="card" id="modifyRequestArea" style="display:none;">
+            <div class="card-title"><span class="icon">🔔</span>待处理修改请求</div>
+            <div id="modifyRequestList"></div>
+        </div>
+    </div>
+
+    <!-- 更改作业安排弹窗 -->
+    <div id="modifyTimeModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:50;">
+        <div style="background:#fff;border-radius:1rem;padding:1.5rem;width:90%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.2);max-height:80vh;display:flex;flex-direction:column;">
+            <h3 style="font-size:1.1rem;font-weight:700;color:#333;margin-bottom:1rem;text-align:center;flex-shrink:0;">更改作业安排</h3>
+            <div id="modifyHomeworkList" style="overflow-y:auto;flex:1;"></div>
+            <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-shrink:0;">
+                <button onclick="closeModifyTimeModal()" style="flex:1;padding:0.7rem;border:none;border-radius:0.5rem;background:#e2e8f0;color:#555;font-weight:600;cursor:pointer;">取消</button>
+                <button onclick="sendModifyRequest()" style="flex:1;padding:0.7rem;border:none;border-radius:0.5rem;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-weight:700;cursor:pointer;">发送请求</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知发送视图 -->
+    <div id="notifyView" class="view-container">
+        <button class="back-btn" onclick="showMainMenu()">← 返回</button>
+
+        <!-- 通知发送小标题 -->
+        <div class="card-title" style="margin-bottom:0.8rem;font-size:1rem;"><span class="icon">📤</span> 发送通知至晚自习系统</div>
+
+        <!-- 协议警告 -->
+        <div id="protocolWarning" class="protocol-warning hidden">
+            <span class="warn-icon">⚠️</span>
+            <span>当前通过本地文件打开，发送功能无法使用。请通过 HTTP 服务器访问。</span>
+        </div>
+
+        <!-- 通知内容 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">📝</span> 通知内容</div>
+
+            <div class="input-group">
+                <label class="input-label">科目（可选）</label>
+                <div class="subject-group">
+                    <div class="subject-btn active" onclick="selectSubject(this)" data-subject="">不指定</div>
+                    <div class="subject-btn" onclick="selectSubject(this)" data-subject="语文">语文</div>
+                    <div class="subject-btn" onclick="selectSubject(this)" data-subject="数学">数学</div>
+                    <div class="subject-btn" onclick="selectSubject(this)" data-subject="英语">英语</div>
+                    <div class="subject-btn" onclick="selectSubject(this)" data-subject="物理">物理</div>
+                    <div class="subject-btn" onclick="selectSubject(this)" data-subject="化学">化学</div>
+                    <div class="subject-btn" onclick="selectSubject(this)" data-subject="生物">生物</div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">标题</label>
+                <input type="text" id="msgTitle" class="text-input" placeholder="例：数学老师通知" maxlength="100">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">内容</label>
+                <textarea id="msgBody" class="text-input" placeholder="输入通知内容…" maxlength="2000"></textarea>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">附件（可选）</label>
+                <div class="attach-area" onclick="document.getElementById('attachInput').click()">
+                    <span class="attach-icon">📎</span>
+                    <div class="attach-text">点击上传图片或文件，支持批量上传</div>
+                    <div class="attach-hint">支持 jpg/png/gif/pdf/doc/docx/xls/xlsx/ppt/pptx/txt/zip，最大 1GB</div>
+                </div>
+                <input type="file" id="attachInput" multiple onchange="handleAttachSelect(event)">
+                <div class="attach-preview" id="attachPreview">
+                    <!-- 图片预览或文件信息 -->
+                </div>
+                <div class="upload-progress" id="uploadProgress" style="display:none;">
+                    <div class="upload-progress-bar">
+                        <div class="upload-progress-fill" id="uploadProgressFill"></div>
+                    </div>
+                    <div class="upload-progress-text" id="uploadProgressText">正在上传… 0%</div>
+                    <div class="upload-progress-eta" id="uploadProgressEta">预计剩余时间：计算中…</div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">紧急程度</label>
+                <div class="priority-group">
+                    <div class="priority-btn" data-priority="1" onclick="selectPriority(this)">
+                        <span class="p-icon">💤</span>静默
+                        <span class="p-label">min</span>
+                    </div>
+                    <div class="priority-btn" data-priority="2" onclick="selectPriority(this)">
+                        <span class="p-icon">🔕</span>低
+                        <span class="p-label">low</span>
+                    </div>
+                    <div class="priority-btn active" data-priority="3" onclick="selectPriority(this)">
+                        <span class="p-icon">🔔</span>默认
+                        <span class="p-label">default</span>
+                    </div>
+                    <div class="priority-btn" data-priority="4" onclick="selectPriority(this)">
+                        <span class="p-icon">📱</span>高
+                        <span class="p-label">high</span>
+                    </div>
+                    <div class="priority-btn" data-priority="5" onclick="selectPriority(this)">
+                        <span class="p-icon">🚨</span>紧急
+                        <span class="p-label">urgent</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 发送按钮 -->
+        <button class="send-btn" id="sendBtn" onclick="sendNotification()">📤 发送通知</button>
+        <div class="status-bar" id="statusBar"></div>
+
+        <!-- 发送历史 -->
+        <div class="card" style="margin-top: 1rem;">
+            <div class="card-title"><span class="icon">📋</span> 发送历史</div>
+            <div class="history-list" id="historyList">
+                <div class="empty-history">暂无发送记录</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ 用户系统（localStorage 模式） ============
+        const LS_USER_KEY = 'teacher_auth_user';
+        const LS_USERS_KEY = 'teacher_users';
+        const LS_SENT_KEY = 'teacher_sent_history';
+        let currentUser = null;
+
+        // ============ Supabase 配置 ============
+        const SUPABASE_URL = '/api/supabase';
+        const SUPABASE_ANON_KEY = 'sb_publishable_x0V-7Mj0PyphcH0W2cID0A_W-yUfdME';
+        let USE_SUPABASE = SUPABASE_URL !== 'https://YOUR_PROJECT_ID.supabase.co';
+
+        // Supabase REST API 封装
+        function sbRest(table, method, body) {
+            var url = SUPABASE_URL + '/rest/v1/' + table;
+            var headers = {
+                'Content-Type': 'application/json'
+            };
+            var opts = {
+                method: method || 'GET',
+                headers: headers
+            };
+            if (body && (method === 'POST' || method === 'PATCH')) {
+                opts.body = JSON.stringify(body);
+            }
+            return fetch(url, opts).then(function(r) {
+                if (!r.ok) throw new Error('Supabase REST error: ' + r.status);
+                return r.json();
+            });
+        }
+        function sbGet(table, filterCol, filterVal, selectCols) {
+            var url = SUPABASE_URL + '/rest/v1/' + table + (filterCol ? '?' + filterCol + '=eq.' + encodeURIComponent(filterVal) : '');
+            if (selectCols) url += (filterCol ? '&' : '?') + 'select=' + selectCols;
+            return fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(function(r) { return r.json(); });
+        }
+        function sbGetSingle(table, filterCol, filterVal, selectCols) {
+            return sbGet(table, filterCol, filterVal, selectCols).then(function(data) {
+                return data && data.length > 0 ? data[0] : null;
+            });
+        }
+        function sbInsert(table, row) {
+            return sbRest(table, 'POST', row).then(function(data) {
+                return data && data.length > 0 ? data[0] : row;
+            });
+        }
+        function sbUpdate(table, filterCol, filterVal, updates) {
+            var url = SUPABASE_URL + '/rest/v1/' + table + '?' + filterCol + '=eq.' + encodeURIComponent(filterVal);
+            return fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updates)
+            }).then(function(r) { return r.json(); });
+        }
+        function sbDelete(table, filterCol, filterVal) {
+            var url = SUPABASE_URL + '/rest/v1/' + table + '?' + filterCol + '=eq.' + encodeURIComponent(filterVal);
+            return fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(function(r) { return r.json(); });
+        }
+
+        // ============ 数据库操作实时状态显示 ============
+        var _dbStatusTimer = null;
+        var _dbStatusHideTimer = null;
+
+        function dbShowStatus(text, type) {
+            var inner = document.getElementById('dbStatusInner');
+            var dot = document.getElementById('dbStatusDot');
+            var icon = document.getElementById('dbStatusIcon');
+            var txt = document.getElementById('dbStatusText');
+            if (!inner) return;
+            if (_dbStatusHideTimer) { clearTimeout(_dbStatusHideTimer); _dbStatusHideTimer = null; }
+            var icons = {
+                reading: '\uD83D\uDCE8', writing: '\u270F\uFE0F',
+                success: '\u2705', error: '\u274C'
+            };
+            var labels = {
+                reading: 'reading', writing: 'writing',
+                success: 'success', error: 'error'
+            };
+            dot.className = 'db-status-dot ' + (labels[type] || 'reading');
+            icon.textContent = icons[type] || '';
+            txt.textContent = text || '';
+            inner.className = 'db-status-toast-inner visible' + (type === 'success' ? ' success' : '') + (type === 'error' ? ' error' : '');
+            _dbStatusHideTimer = setTimeout(dbHideStatus, 1500);
+        }
+        function dbHideStatus() {
+            var inner = document.getElementById('dbStatusInner');
+            if (inner) inner.classList.remove('visible');
+            if (_dbStatusHideTimer) { clearTimeout(_dbStatusHideTimer); _dbStatusHideTimer = null; }
+        }
+
+        // ============ 数据库操作封装 ============
+        var DB = {
+            saveSchedule: function(date, startTime, homeworkList) {
+                dbShowStatus('保存时间表…', 'writing');
+                return sbGetSingle('schedules', 'date', date).then(function(existing) {
+                    var payload = {
+                        date: date,
+                        start_time: startTime,
+                        homework_list: JSON.stringify(homeworkList)
+                    };
+                    if (existing) {
+                        return sbUpdate('schedules', 'date', date, payload);
+                    } else {
+                        return sbInsert('schedules', payload);
+                    }
+                }).then(function() {
+                    dbShowStatus('时间表已保存至数据库', 'success');
+                    showScheduleStatus('时间表已保存至数据库', 'success');
+                }).catch(function(e) {
+                    dbShowStatus('保存失败：' + (e.message || '未知错误'), 'error');
+                    showScheduleStatus('保存失败：' + (e.message || '未知错误'), 'error');
+                    throw e;
+                });
+            },
+            getSchedule: function(date) {
+                dbShowStatus('读取时间表…', 'reading');
+                return sbGetSingle('schedules', 'date', date).then(function(row) {
+                    dbHideStatus();
+                    if (!row) return null;
+                    var list = row.homework_list;
+                    if (typeof list === 'string') {
+                        try { list = JSON.parse(list); } catch(e) { list = []; }
+                    }
+                    return { date: row.date, start_time: row.start_time, homework_list: list };
+                }).catch(function(e) {
+                    dbShowStatus('读取失败：' + (e.message || '未知错误'), 'error');
+                    throw e;
+                });
+            },
+            deleteOldSchedules: function(todayDate) {
+                var url = SUPABASE_URL + '/rest/v1/schedules?date=neq.' + encodeURIComponent(todayDate);
+                return fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(function(r) { return r.json(); });
+            },
+            createModifyRequest: function(date, startTime, homeworkList) {
+                return sbInsert('modify_requests', {
+                    date: date,
+                    start_time: startTime,
+                    homework_list: JSON.stringify(homeworkList),
+                    status: 'pending'
+                });
+            },
+            getPendingModifyRequests: function() {
+                var url = SUPABASE_URL + '/rest/v1/modify_requests?status=eq.pending&order=created_at.desc';
+                return fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(function(r) { return r.json(); });
+            },
+            approveModifyRequest: function(id) {
+                var now = new Date().toISOString();
+                return sbGetSingle('modify_requests', 'id', id).then(function(req) {
+                    if (!req) throw new Error('请求不存在');
+                    var list = req.homework_list;
+                    if (typeof list === 'string') {
+                        try { list = JSON.parse(list); } catch(e) { list = []; }
+                    }
+                    return Promise.all([
+                        sbUpdate('modify_requests', 'id', id, { status: 'approved', resolved_at: now }),
+                        DB.saveSchedule(req.date, req.start_time, list)
+                    ]);
+                });
+            },
+            ignoreModifyRequest: function(id) {
+                var now = new Date().toISOString();
+                return sbUpdate('modify_requests', 'id', id, { status: 'ignored', resolved_at: now });
+            }
+        };
+
+        // SHA-256 哈希
+        async function sha256(str) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // 显示/隐藏认证弹窗
+        function showAuth(mode) {
+            document.getElementById('authOverlay').classList.remove('hidden');
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('recoverForm').classList.add('hidden');
+            if(mode === 'login') document.getElementById('loginForm').classList.remove('hidden');
+            if(mode === 'register') document.getElementById('registerForm').classList.remove('hidden');
+            if(mode === 'recover') document.getElementById('recoverForm').classList.remove('hidden');
+            ['loginMsg','regMsg','recMsg'].forEach(id => document.getElementById(id).textContent = '');
+        }
+        function hideAuth() {
+            document.getElementById('authOverlay').classList.add('hidden');
+        }
+        document.getElementById('authOverlay').addEventListener('click', function(e) {
+            if(e.target === this) hideAuth();
+        });
+
+        // 登录（用户名）
+        async function doLogin() {
+            var username = document.getElementById('loginUsername').value.trim();
+            var pw = document.getElementById('loginPassword').value;
+            var msg = document.getElementById('loginMsg');
+            if(!username || !pw) { msg.textContent = '请填写用户名和密码'; msg.className = 'msg error'; return; }
+            msg.textContent = '登录中…'; msg.className = 'msg';
+
+            var users = JSON.parse(localStorage.getItem(LS_USERS_KEY) || '[]');
+            var hash = await sha256(pw);
+            var u = users.find(function(x){ return x.username === username && x.password === hash; });
+            if(u) {
+                currentUser = {username: u.username, email: u.email || '', user_metadata: {subject: u.subject}};
+                saveSession();
+                updateUserUI();
+                hideAuth();
+                unlockContent();
+                applyUserSubject();
+            } else {
+                msg.textContent = '用户名或密码错误'; msg.className = 'msg error';
+            }
+        }
+
+        // 注册（用户名必填 + 邮箱选填 + 密码 + 学科）
+        async function doRegister() {
+            var username = document.getElementById('regUsername').value.trim();
+            var email = document.getElementById('regEmail').value.trim();
+            var pw = document.getElementById('regPassword').value;
+            var subject = document.getElementById('regSubject').value;
+            var msg = document.getElementById('regMsg');
+            if(!username) { msg.textContent = '请填写用户名'; msg.className = 'msg error'; return; }
+            if(!pw) { msg.textContent = '请填写密码'; msg.className = 'msg error'; return; }
+            if(pw.length < 6) { msg.textContent = '密码至少6位'; msg.className = 'msg error'; return; }
+            if(!subject) { msg.textContent = '请选择任教学科'; msg.className = 'msg error'; return; }
+            msg.textContent = '注册中…'; msg.className = 'msg';
+
+            var users = JSON.parse(localStorage.getItem(LS_USERS_KEY) || '[]');
+            if(users.find(function(x){ return x.username === username; })) {
+                msg.textContent = '该用户名已注册'; msg.className = 'msg error'; return;
+            }
+            var hash = await sha256(pw);
+            users.push({username: username, email: email, password: hash, subject: subject});
+            localStorage.setItem(LS_USERS_KEY, JSON.stringify(users));
+            msg.textContent = '注册成功！请登录。'; msg.className = 'msg success';
+            setTimeout(function(){ showAuth('login'); }, 1500);
+        }
+
+        // 密码找回
+        async function doRecover() {
+            var email = document.getElementById('recEmail').value.trim();
+            var msg = document.getElementById('recMsg');
+            if(!email) { msg.textContent = '请填写注册时的邮箱'; msg.className = 'msg error'; return; }
+            var users = JSON.parse(localStorage.getItem(LS_USERS_KEY) || '[]');
+            var u = users.find(function(x){ return x.email === email; });
+            if(!u) {
+                msg.textContent = '未找到使用该邮箱注册的账号'; msg.className = 'msg error'; return;
+            }
+            msg.textContent = '找回成功！您的用户名为：' + u.username + '，请牢记。如需重置密码请联系管理员。'; msg.className = 'msg success';
+        }
+
+        // 登出
+        function doLogout() {
+            currentUser = null;
+            localStorage.removeItem(LS_USER_KEY);
+            document.cookie = 'teacher_token=; Max-Age=0; path=/';
+            updateUserUI();
+            lockContent();
+            showAuth('login');
+        }
+
+        // 保存会话到 localStorage + cookie
+        function saveSession() {
+            if(!currentUser) return;
+            var data = {username: currentUser.username, email: currentUser.email, subject: (currentUser.user_metadata && currentUser.user_metadata.subject) || ''};
+            localStorage.setItem(LS_USER_KEY, JSON.stringify(data));
+            var expires = new Date(Date.now() + 7*24*60*60*1000).toUTCString();
+            document.cookie = 'teacher_token=1; expires=' + expires + '; path=/; SameSite=Lax';
+        }
+
+        // 更新用户 UI
+        function updateUserUI() {
+            var info = document.getElementById('userInfo');
+            var btnLogin = document.getElementById('btnLogin');
+            var btnLogout = document.getElementById('btnLogout');
+            if(currentUser) {
+                var sub = (currentUser.user_metadata && currentUser.user_metadata.subject) || '';
+                info.textContent = currentUser.username + (sub ? ' · ' + sub : '');
+                btnLogin.classList.add('hidden');
+                btnLogout.classList.remove('hidden');
+            } else {
+                info.textContent = '';
+                btnLogin.classList.remove('hidden');
+                btnLogout.classList.add('hidden');
+            }
+        }
+
+        // 强制登录：锁定/解锁内容
+        function lockContent() {
+            document.getElementById('mainContent').classList.add('locked');
+        }
+        function unlockContent() {
+            document.getElementById('mainContent').classList.remove('locked');
+        }
+
+        // 自动登录（页面加载时）
+        async function autoLogin() {
+            var saved = localStorage.getItem(LS_USER_KEY);
+            if(saved) {
+                try {
+                    var data = JSON.parse(saved);
+                    if(data.username) {
+                        currentUser = {username: data.username, email: data.email || '', user_metadata: {subject: data.subject}};
+                        updateUserUI();
+                        unlockContent();
+                        applyUserSubject();
+                        return;
+                    }
+                } catch(e) {}
+            }
+            // 未登录，锁定内容并弹出登录框
+            lockContent();
+            showAuth('login');
+        }
+
+        // 登录后默认选中学科
+        function applyUserSubject() {
+            if(!currentUser || !currentUser.user_metadata) return;
+            var sub = currentUser.user_metadata.subject;
+            if(!sub) return;
+            setTimeout(function() {
+                document.querySelectorAll('.subject-btn').forEach(function(btn) {
+                    if(btn.dataset.subject === sub) {
+                        btn.click();
+                    }
+                });
+            }, 100);
+        }
+
+        // 记录已发送通知
+        function recordSentNotification(subject, title) {
+            var list = JSON.parse(localStorage.getItem(LS_SENT_KEY) || '[]');
+            list.unshift({time: new Date().toISOString(), subject: subject, title: title});
+            if(list.length > 50) list = list.slice(0, 50);
+            localStorage.setItem(LS_SENT_KEY, JSON.stringify(list));
+        }
+
+        // ============ 页面切换逻辑 ============
+        function showView(viewId) {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.querySelectorAll('.view-container').forEach(function(v) { v.classList.remove('active'); });
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        function showMainMenu() {
+            document.querySelectorAll('.view-container').forEach(function(v) { v.classList.remove('active'); });
+            document.getElementById('mainMenu').style.display = 'flex';
+        }
+
+        // ============ 作业时间表 SSE 订阅 ============
+        let scheduleEventSource = null;
+        let scheduleData = null;
+
+        // 更新时间表标题中的日期
+        function updateScheduleTitle() {
+            var now = new Date();
+            var month = now.getMonth() + 1;
+            var day = now.getDate();
+            document.getElementById('scheduleTitle').textContent = '高二（13）班' + month + '月' + day + '日晚自习作业时间表';
+        }
+
+        function initScheduleSubscription() {
+            // 首次加载：优先从数据库获取当日时间表
+            var today = new Date();
+            var todayDate = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+            DB.getSchedule(todayDate).then(function(row) {
+                if (row && row.homework_list && row.homework_list.length > 0) {
+                    scheduleData = {
+                        type: 'schedule',
+                        date: row.date,
+                        startTime: row.start_time,
+                        homeworkList: row.homework_list
+                    };
+                    renderSchedule();
+                    showScheduleStatus('已从数据库加载时间表', 'success');
+                }
+            }).catch(function(e) {
+                console.log('数据库读取失败，依赖 ntfy SSE:', e);
+            });
+
+            // 启动 ntfy SSE 作为实时推送备用
+            try {
+                scheduleEventSource = new EventSource('https://ntfy.sh/wh12z213_schedule/sse');
+                scheduleEventSource.onmessage = function(event) {
+                    try {
+                        var outer = JSON.parse(event.data);
+                        // ntfy SSE 返回的 JSON，消息内容在 message 字段
+                        var inner = outer.message || event.data;
+                        var data = JSON.parse(inner);
+                        if (data.type === 'schedule' && data.homeworkList) {
+                            scheduleData = data;
+                            renderSchedule();
+                        }
+                    } catch(e) {
+                        // 第二次 JSON.parse 可能因为外层 data 本身就是 message
+                        try {
+                            var data = JSON.parse(event.data);
+                            if (data.type === 'schedule' && data.homeworkList) {
+                                scheduleData = data;
+                                renderSchedule();
+                            }
+                        } catch(e2) {}
+                    }
+                };
+                scheduleEventSource.onerror = function() {
+                    // 静默重连，EventSource 会自动处理
+                };
+            } catch(e) {}
+        }
+
+        function renderSchedule() {
+            if (!scheduleData || !scheduleData.homeworkList) return;
+
+            var homeworkList = scheduleData.homeworkList;
+            var startTimeStr = scheduleData.startTime || '20:00';
+            var parts = startTimeStr.split(':');
+            var startHour = parseInt(parts[0]);
+            var startMinute = parseInt(parts[1]);
+
+            // 构建表格 HTML
+            var html = '<table class="schedule-table">';
+            html += '<thead><tr><th>序号</th><th>科目</th><th>完成时间</th><th>用时</th></tr></thead>';
+            html += '<tbody>';
+
+            // 第一行的完成时间就是开始时间 + 第一项用时
+            var cumulativeMinutes = 0;
+            for (var i = 0; i < homeworkList.length; i++) {
+                var item = homeworkList[i];
+                var timeMinutes = item.time || 0;
+                cumulativeMinutes += timeMinutes;
+
+                // 计算完成时间：开始时间 + 累计分钟
+                var totalMinutes = startHour * 60 + startMinute + cumulativeMinutes;
+                var endHour = Math.floor(totalMinutes / 60) % 24;
+                var endMin = totalMinutes % 60;
+                var endTimeStr = pad(endHour) + ':' + pad(endMin);
+
+                // 开始时间（当前项的开始 = 上一项的结束）
+                var prevTotalMinutes = startHour * 60 + startMinute + (cumulativeMinutes - timeMinutes);
+                var prevHour = Math.floor(prevTotalMinutes / 60) % 24;
+                var prevMin = prevTotalMinutes % 60;
+                var startTimeFormatted = pad(prevHour) + ':' + pad(prevMin);
+
+                html += '<tr class="schedule-row">';
+                html += '<td>' + (i + 1) + '</td>';
+                html += '<td>' + escapeHtml(item.subject) + '</td>';
+                html += '<td>' + startTimeFormatted + ' - ' + endTimeStr + '</td>';
+                html += '<td>' + timeMinutes + '分钟</td>';
+                html += '</tr>';
+            }
+
+            html += '</tbody></table>';
+
+            document.getElementById('scheduleContent').innerHTML = html;
+        }
+
+        // 更改作业安排弹窗相关函数
+        var editingHomeworkList = []; // 弹窗中正在编辑的作业列表副本
+
+        function showScheduleStatus(msg, type) {
+            var bar = document.getElementById('scheduleStatusBar');
+            bar.className = 'status-bar ' + type;
+            bar.textContent = msg;
+            if (type !== 'sending') {
+                setTimeout(function() {
+                    bar.className = 'status-bar';
+                    bar.textContent = '';
+                }, 3000);
+            }
+        }
+
+        function openModifyTimeModal() {
+            if (!scheduleData || !scheduleData.homeworkList || scheduleData.homeworkList.length === 0) {
+                showScheduleStatus('尚未收到作业时间表，无法更改', 'error');
+                return;
+            }
+            // 深拷贝当前作业列表用于编辑
+            editingHomeworkList = scheduleData.homeworkList.map(function(item) {
+                return { subject: item.subject, time: item.time };
+            });
+            renderModifyList();
+            document.getElementById('modifyTimeModal').classList.remove('hidden');
+        }
+
+        function closeModifyTimeModal() {
+            document.getElementById('modifyTimeModal').classList.add('hidden');
+            editingHomeworkList = [];
+        }
+
+        function renderModifyList() {
+            var container = document.getElementById('modifyHomeworkList');
+            var html = '';
+            for (var i = 0; i < editingHomeworkList.length; i++) {
+                var item = editingHomeworkList[i];
+                var canUp = i > 0;
+                var canDown = i < editingHomeworkList.length - 1;
+                html +=
+                    '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;padding:0.6rem;background:#f8fafc;border-radius:0.5rem;">' +
+                    '<span style="font-weight:700;color:#667eea;min-width:1.5rem;text-align:center;">' + (i + 1) + '</span>' +
+                    '<span style="flex:1;font-size:0.9rem;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(item.subject) + '</span>' +
+                    '<input type="number" min="5" max="180" value="' + item.time + '" ' +
+                    'onchange="updateHomeworkTime(' + i + ', this.value)" ' +
+                    'style="width:4rem;padding:0.3rem;border:2px solid #e2e8f0;border-radius:0.35rem;font-size:0.85rem;text-align:center;outline:none;">' +
+                    '<span style="font-size:0.75rem;color:#94a3b8;">分</span>' +
+                    '<button onclick="moveHomeworkUp(' + i + ')" ' + (canUp ? '' : 'disabled ') +
+                    'style="padding:0.25rem 0.4rem;border:none;border-radius:0.35rem;background:' + (canUp ? '#e2e8f0' : '#f1f5f9') + ';color:' + (canUp ? '#555' : '#cbd5e1') + ';font-size:0.8rem;cursor:' + (canUp ? 'pointer' : 'not-allowed') + ';">↑</button>' +
+                    '<button onclick="moveHomeworkDown(' + i + ')" ' + (canDown ? '' : 'disabled ') +
+                    'style="padding:0.25rem 0.4rem;border:none;border-radius:0.35rem;background:' + (canDown ? '#e2e8f0' : '#f1f5f9') + ';color:' + (canDown ? '#555' : '#cbd5e1') + ';font-size:0.8rem;cursor:' + (canDown ? 'pointer' : 'not-allowed') + ';">↓</button>' +
+                    '</div>';
+            }
+            container.innerHTML = html;
+        }
+
+        function moveHomeworkUp(idx) {
+            if (idx <= 0) return;
+            var temp = editingHomeworkList[idx];
+            editingHomeworkList[idx] = editingHomeworkList[idx - 1];
+            editingHomeworkList[idx - 1] = temp;
+            renderModifyList();
+        }
+
+        function moveHomeworkDown(idx) {
+            if (idx >= editingHomeworkList.length - 1) return;
+            var temp = editingHomeworkList[idx];
+            editingHomeworkList[idx] = editingHomeworkList[idx + 1];
+            editingHomeworkList[idx + 1] = temp;
+            renderModifyList();
+        }
+
+        function updateHomeworkTime(idx, val) {
+            var time = parseInt(val);
+            if (isNaN(time) || time < 5) time = 5;
+            if (time > 180) time = 180;
+            editingHomeworkList[idx].time = time;
+        }
+
+        async function sendModifyRequest() {
+            if (editingHomeworkList.length === 0) {
+                showScheduleStatus('没有可发送的更改', 'error');
+                return;
+            }
+
+            var today = new Date();
+            var todayDate = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+            var startTime = (scheduleData && scheduleData.startTime) || '20:00';
+            var homeworkList = editingHomeworkList.map(function(item) {
+                return { subject: item.subject, time: item.time };
+            });
+
+            // 先尝试通过数据库创建修改请求
+            try {
+                await DB.createModifyRequest(todayDate, startTime, homeworkList);
+                showScheduleStatus('修改请求已发送至数据库', 'success');
+                closeModifyTimeModal();
+                return;
+            } catch (dbErr) {
+                console.log('数据库发送失败，回退到 ntfy:', dbErr);
+            }
+
+            // 回退到 ntfy POST
+            var jsonBody = {
+                topic: 'wh12z213_modify_request',
+                message: JSON.stringify({
+                    type: 'modify_request',
+                    homeworkList: homeworkList
+                }),
+                title: '更改作业安排请求',
+                priority: 4,
+                tags: ['modify']
+            };
+
+            try {
+                var resp = await fetch('https://ntfy.sh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonBody)
+                });
+                if (resp.ok) {
+                    showScheduleStatus('已发送更改请求，等待晚自习系统确认', 'success');
+                    closeModifyTimeModal();
+                } else {
+                    showScheduleStatus('发送失败 (' + resp.status + ')', 'error');
+                }
+            } catch (err) {
+                showScheduleStatus('网络错误', 'error');
+            }
+        }
+
+        // 保存当前时间表到数据库
+        async function saveScheduleToDB() {
+            if (!scheduleData || !scheduleData.homeworkList || scheduleData.homeworkList.length === 0) {
+                showScheduleStatus('没有可保存的时间表', 'error');
+                return;
+            }
+            var today = new Date();
+            var todayDate = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+            try {
+                await DB.saveSchedule(todayDate, scheduleData.startTime || '20:00', scheduleData.homeworkList);
+                await DB.deleteOldSchedules(todayDate);
+            } catch (e) {
+                console.error('saveScheduleToDB error:', e);
+            }
+        }
+
+        // 轮询待处理修改请求
+        var _modifyRequestPollTimer = null;
+
+        function pollModifyRequests() {
+            DB.getPendingModifyRequests().then(function(rows) {
+                renderModifyRequests(rows || []);
+            }).catch(function(e) {
+                console.log('轮询修改请求失败:', e);
+            });
+        }
+
+        function renderModifyRequests(rows) {
+            var area = document.getElementById('modifyRequestArea');
+            var list = document.getElementById('modifyRequestList');
+            if (!area || !list) return;
+            if (!rows || rows.length === 0) {
+                area.style.display = 'none';
+                return;
+            }
+            area.style.display = 'block';
+            var html = '';
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var listData = row.homework_list;
+                if (typeof listData === 'string') {
+                    try { listData = JSON.parse(listData); } catch(e) { listData = []; }
+                }
+                var subjects = (listData || []).map(function(item) { return item.subject + ' ' + item.time + '分钟'; }).join('，');
+                var totalTime = 0;
+                (listData || []).forEach(function(item) { totalTime += item.time || 0; });
+                html += '<div class="modify-request-card">';
+                html += '<div class="mr-header"><span class="mr-date">' + escapeHtml(row.date) + '</span><span style="font-size:0.75rem;color:#9a3412;">共' + totalTime + '分钟</span></div>';
+                html += '<div class="mr-subjects">' + escapeHtml(subjects) + '</div>';
+                html += '<div class="mr-actions">';
+                html += '<button class="mr-btn-approve" onclick="handleApproveRequest(' + row.id + ')">✅ 同意</button>';
+                html += '<button class="mr-btn-ignore" onclick="handleIgnoreRequest(' + row.id + ')">❌ 忽略</button>';
+                html += '</div></div>';
+            }
+            list.innerHTML = html;
+        }
+
+        async function handleApproveRequest(id) {
+            try {
+                await DB.approveModifyRequest(id);
+                showScheduleStatus('已同意修改请求并更新时间表', 'success');
+                pollModifyRequests();
+                // 重新从数据库加载时间表
+                var today = new Date();
+                var todayDate = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+                DB.getSchedule(todayDate).then(function(row) {
+                    if (row && row.homework_list) {
+                        scheduleData = {
+                            type: 'schedule',
+                            date: row.date,
+                            startTime: row.start_time,
+                            homeworkList: row.homework_list
+                        };
+                        renderSchedule();
+                    }
+                });
+            } catch (e) {
+                showScheduleStatus('处理失败：' + (e.message || '未知错误'), 'error');
+            }
+        }
+
+        async function handleIgnoreRequest(id) {
+            try {
+                await DB.ignoreModifyRequest(id);
+                showScheduleStatus('已忽略修改请求', 'success');
+                pollModifyRequests();
+            } catch (e) {
+                showScheduleStatus('处理失败：' + (e.message || '未知错误'), 'error');
+            }
+        }
+
+        // 页面加载时初始化
+        updateScheduleTitle();
+        initScheduleSubscription();
+        pollModifyRequests();
+        _modifyRequestPollTimer = setInterval(pollModifyRequests, 5000);
+
+        // ============ 协议检测 ============
+        if (window.location.protocol === 'file:') {
+            document.getElementById('protocolWarning').classList.remove('hidden');
+        }
+
+        // ============ 配置 ============
+        const NTFY_TOPIC = 'wh12z213_noticeboard';
+        const NTFY_BASE = 'https://ntfy.sh';
+        const MAX_ATTACH_SIZE = 1024 * 1024 * 1024; // 本地限制 1GB（与 EasySend 免费版一致）
+        const EASYSEND_BASE = 'https://easysend.co';
+
+        let currentPriority = 3;
+        let currentSubject = '';
+        let attachments = [];       // 每个元素: { id, file, dataUrl, status, shareUrl, progress, xhr }
+        let attachCounter = 0;      // 全局 id 计数器
+
+        // ============ 科目选择 ============
+        function selectSubject(el) {
+            document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            currentSubject = el.dataset.subject;
+            var titleInput = document.getElementById('msgTitle');
+            // 标题为空时，根据科目自动填充默认标题
+            if (!titleInput.value.trim()) {
+                if (!currentSubject) {
+                    titleInput.value = '通知：';
+                } else if (currentSubject === '生物') {
+                    titleInput.value = '班主任通知：';
+                } else {
+                    titleInput.value = currentSubject + '老师通知：';
+                }
+            }
+        }
+
+        // ============ 优先级选择 ============
+        function selectPriority(el) {
+            document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            currentPriority = parseInt(el.dataset.priority);
+        }
+
+        // ============ 附件处理 ============
+        function handleAttachSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            document.getElementById('attachPreview').classList.add('show');
+
+            let index = 0;
+            function processNext() {
+                if (index >= files.length) {
+                    event.target.value = ''; // 清空 input 以便重复选择相同文件
+                    return;
+                }
+                const file = files[index];
+                index++;
+
+                // 检查文件大小
+                if (file.size > MAX_ATTACH_SIZE) {
+                    showStatus('文件 ' + file.name + ' 大小超过 1GB 限制，已跳过', 'error');
+                    processNext();
+                    return;
+                }
+
+                const id = ++attachCounter;
+                const attachment = { id: id, file: file, dataUrl: null, status: 'pending', shareUrl: null, progress: 0, xhr: null };
+                attachments.push(attachment);
+                renderAttachPreview();
+
+                // 判断是否为图片
+                if (file.type.startsWith('image/')) {
+                    const img = new Image();
+                    img.onload = function() {
+                        if (file.size <= 2 * 1024 * 1024) {
+                            // <=2MB 无需压缩，直接使用原图
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                attachment.dataUrl = e.target.result;
+                                renderAttachPreview();
+                                preUploadAttachment(id);
+                                processNext();
+                            };
+                            reader.onerror = function() {
+                                attachment.status = 'error';
+                                renderAttachPreview();
+                                showStatus('图片 ' + file.name + ' 读取失败，已跳过', 'error');
+                                processNext();
+                            };
+                            reader.readAsDataURL(file);
+                        } else {
+                            // >2MB 压缩以加速上传（目标控制在 1MB 以内）
+                            compressImage(img, file, function(dataUrl, compressedSize) {
+                                attachment.dataUrl = dataUrl;
+                                attachment.compressedSize = compressedSize;
+                                renderAttachPreview();
+                                preUploadAttachment(id);
+                                processNext();
+                            });
+                        }
+                    };
+                    img.onerror = function() {
+                        attachment.status = 'error';
+                        renderAttachPreview();
+                        showStatus('图片 ' + file.name + ' 加载失败，已跳过', 'error');
+                        processNext();
+                    };
+                    img.src = URL.createObjectURL(file);
+                } else {
+                    // 非图片文件：直接开始预上传
+                    preUploadAttachment(id);
+                    processNext();
+                }
+            }
+
+            processNext();
+        }
+
+        function removeAttach(id) {
+            const idx = attachments.findIndex(function(a) { return a.id === id; });
+            if (idx === -1) return;
+            const att = attachments[idx];
+            if (att.xhr) {
+                att.xhr.abort();
+            }
+            attachments.splice(idx, 1);
+            if (attachments.length === 0) {
+                document.getElementById('attachInput').value = '';
+            }
+            renderAttachPreview();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // ============ 图片压缩（加速上传，目标 <=1MB） ============
+        function compressImage(img, file, callback) {
+            const quality = 0.7;
+            const maxWidth = 1600;
+
+            let w = img.width;
+            let h = img.height;
+            if (w > maxWidth) {
+                h = Math.round(h * maxWidth / w);
+                w = maxWidth;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+
+            let dataUrl = canvas.toDataURL('image/jpeg', quality);
+            let compressedSize = Math.round(dataUrl.length * 0.75);
+
+            // 如果仍 >1MB，逐步降低质量
+            if (compressedSize > 1024 * 1024) {
+                let q = 0.5;
+                while (q >= 0.2) {
+                    dataUrl = canvas.toDataURL('image/jpeg', q);
+                    compressedSize = Math.round(dataUrl.length * 0.75);
+                    if (compressedSize <= 1024 * 1024) break;
+                    q -= 0.1;
+                }
+            }
+
+            // 如果质量降到最低仍 >1MB，缩小尺寸
+            if (compressedSize > 1024 * 1024) {
+                let scale = 0.6;
+                while (scale >= 0.3) {
+                    const cw = Math.round(w * scale);
+                    const ch = Math.round(h * scale);
+                    const c2 = document.createElement('canvas');
+                    c2.width = cw;
+                    c2.height = ch;
+                    c2.getContext('2d').drawImage(img, 0, 0, cw, ch);
+                    dataUrl = c2.toDataURL('image/jpeg', 0.4);
+                    compressedSize = Math.round(dataUrl.length * 0.75);
+                    if (compressedSize <= 1024 * 1024) break;
+                    scale -= 0.1;
+                }
+            }
+
+            if (callback) callback(dataUrl, compressedSize);
+        }
+
+        function getStatusHtml(att) {
+            if (att.status === 'uploading') {
+                return '<div style="flex:1;min-width:0;">' +
+                    '<div class="attach-card-status status-uploading">正在上传 ' + att.progress + '%</div>' +
+                    '<div class="attach-card-progress-bar"><div class="attach-card-progress-fill" style="width:' + att.progress + '%"></div></div>' +
+                    '</div>';
+            } else if (att.status === 'done') {
+                return '<div class="attach-card-status status-done">✓ 已上传</div>';
+            } else if (att.status === 'error') {
+                return '<div class="attach-card-status status-error">✗ 上传失败</div>';
+            } else {
+                return '<div class="attach-card-status status-pending">等待上传…</div>';
+            }
+        }
+
+        function renderAttachPreview() {
+            const preview = document.getElementById('attachPreview');
+            let html = '';
+            for (let i = 0; i < attachments.length; i++) {
+                const att = attachments[i];
+                const file = att.file;
+                const statusHtml = getStatusHtml(att);
+                let borderStyle = '';
+                if (att.status === 'uploading') borderStyle = 'border: 2px solid #3b82f6;';
+                else if (att.status === 'done') borderStyle = 'border: 2px solid #16a34a;';
+                else if (att.status === 'error') borderStyle = 'border: 2px solid #ef4444;';
+                else borderStyle = 'border: 2px solid #e2e8f0;';
+
+                if (file.type.startsWith('image/') && att.dataUrl) {
+                    html += '<div style="position:relative;display:inline-block;width:100%;margin-bottom:0.5rem;' + borderStyle + 'border-radius:0.5rem;overflow:hidden;padding:4px;">' +
+                        '<img src="' + att.dataUrl + '" class="attach-preview-img">' +
+                        '<button class="attach-remove-btn" onclick="removeAttach(' + att.id + ')" style="position:absolute;top:8px;right:8px;">✕</button>' +
+                        '</div>' +
+                        '<div class="attach-preview-file" style="' + borderStyle + '">' +
+                        '<span class="file-icon">🖼️</span>' +
+                        '<div class="file-info"><div class="file-name">' + escapeHtml(file.name) + '</div>' +
+                        '<div class="file-size">' + formatFileSize(att.compressedSize || file.size) + '</div></div>' +
+                        statusHtml +
+                        '<button class="attach-remove-btn" onclick="removeAttach(' + att.id + ')">✕</button>' +
+                        '</div>';
+                } else {
+                    const iconMap = {
+                        'application/pdf': '📄',
+                        'application/msword': '📝',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
+                        'application/vnd.ms-excel': '📊',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
+                        'application/vnd.ms-powerpoint': '📽️',
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📽️',
+                        'application/zip': '📦',
+                        'text/plain': '📃'
+                    };
+                    const icon = iconMap[file.type] || '📎';
+                    html += '<div class="attach-preview-file" style="' + borderStyle + '">' +
+                        '<span class="file-icon">' + icon + '</span>' +
+                        '<div class="file-info"><div class="file-name">' + escapeHtml(file.name) + '</div>' +
+                        '<div class="file-size">' + formatFileSize(file.size) + '</div></div>' +
+                        statusHtml +
+                        '<button class="attach-remove-btn" onclick="removeAttach(' + att.id + ')">✕</button>' +
+                        '</div>';
+                }
+            }
+            preview.innerHTML = html;
+            if (attachments.length === 0) {
+                preview.classList.remove('show');
+            } else {
+                preview.classList.add('show');
+            }
+        }
+
+        // ============ 预上传单个附件到 EasySend ============
+        function preUploadAttachment(id) {
+            const attachment = attachments.find(function(a) { return a.id === id; });
+            if (!attachment) return;
+
+            attachment.status = 'uploading';
+            attachment.progress = 0;
+            renderAttachPreview();
+
+            const formData = new FormData();
+            formData.append('files[]', attachment.file);
+
+            const xhr = new XMLHttpRequest();
+            attachment.xhr = xhr;
+
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    attachment.progress = Math.round(e.loaded / e.total * 100);
+                    renderAttachPreview();
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.success && data.share_url) {
+                            attachment.status = 'done';
+                            attachment.shareUrl = 'https://easysend.co' + data.share_url;
+                            // 保存每个文件的直链 download_url
+                            if (data.files && data.files.length > 0) {
+                                attachment.downloadUrl = 'https://easysend.co' + data.files[0].download_url;
+                            }
+                            attachment.progress = 100;
+                        } else {
+                            attachment.status = 'error';
+                        }
+                    } catch (e) {
+                        attachment.status = 'error';
+                    }
+                } else {
+                    attachment.status = 'error';
+                }
+                attachment.xhr = null;
+                renderAttachPreview();
+            };
+
+            xhr.onerror = function() {
+                attachment.status = 'error';
+                attachment.xhr = null;
+                renderAttachPreview();
+            };
+
+            xhr.onabort = function() {
+                // 被 removeAttach 主动取消时不改状态，因为元素已被移除
+                // 如果是其他原因导致的 abort，标记为错误
+                if (attachments.find(function(a) { return a.id === id; })) {
+                    attachment.status = 'error';
+                    attachment.xhr = null;
+                    renderAttachPreview();
+                }
+            };
+
+            xhr.open('POST', 'https://easysend.co/api/v1/upload');
+            xhr.send(formData);
+        }
+
+        // ============ 等待附件上传完成 ============
+        function waitForAttachmentsUpload() {
+            return new Promise(function(resolve) {
+                const checkInterval = setInterval(function() {
+                    const uploading = attachments.filter(function(a) { return a.status === 'uploading' || a.status === 'pending'; });
+                    const done = attachments.filter(function(a) { return a.status === 'done'; });
+                    const total = attachments.length;
+
+                    // 更新全局进度条
+                    if (total > 0) {
+                        const percent = Math.round((done.length / total) * 100);
+                        document.getElementById('uploadProgressFill').style.width = percent + '%';
+                        document.getElementById('uploadProgressText').textContent = '正在上传附件… ' + percent + '%';
+                        document.getElementById('uploadProgressEta').textContent = '已完成 ' + done.length + '/' + total;
+                    }
+
+                    if (uploading.length === 0) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 500);
+            });
+        }
+
+        // ============ 发送通知 ============
+        async function sendNotification() {
+            var title = document.getElementById('msgTitle').value.trim();
+            var body = document.getElementById('msgBody').value.trim();
+            var sendBtn = document.getElementById('sendBtn');
+            var statusBar = document.getElementById('statusBar');
+
+            var missing = [];
+            if (!title) missing.push('标题');
+            if (!body) missing.push('内容');
+            if (missing.length > 0) {
+                showStatus('请输入' + missing.join('和'), 'error');
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = '发送中…';
+            showStatus('正在发送…', 'sending');
+
+            try {
+                var attachmentInfo = null;
+
+                // 如果有附件，检查状态
+                if (attachments.length > 0) {
+                    const uploadingCount = attachments.filter(function(a) { return a.status === 'uploading' || a.status === 'pending'; }).length;
+                    const doneCount = attachments.filter(function(a) { return a.status === 'done'; }).length;
+                    const errorCount = attachments.filter(function(a) { return a.status === 'error'; }).length;
+
+                    if (uploadingCount > 0) {
+                        // 有正在上传的附件，等待
+                        showStatus('请等待附件上传完成…', 'sending');
+                        document.getElementById('uploadProgress').style.display = 'block';
+                        await waitForAttachmentsUpload();
+                        document.getElementById('uploadProgress').style.display = 'none';
+                        document.getElementById('uploadProgressFill').style.width = '0%';
+                    }
+
+                    // 等待结束后收集所有成功的 shareUrl 和直链
+                    const successAttachments = attachments.filter(function(a) { return a.status === 'done'; });
+                    if (successAttachments.length > 0) {
+                        attachmentInfo = {
+                            shareUrl: successAttachments[0].shareUrl,
+                            files: successAttachments.map(function(a) {
+                                return { name: a.file.name, size: a.file.size, downloadUrl: a.downloadUrl || null };
+                            })
+                        };
+                    } else if (errorCount === attachments.length) {
+                        // 全部失败，按无附件处理
+                        attachmentInfo = null;
+                    }
+                }
+
+                // 构造通知内容（附件以超链接形式附在正文末尾，使用文件直链）
+                var messageBody = body || title || '';
+                if (attachmentInfo) {
+                    var fileParts = attachmentInfo.files.map(function(f) {
+                        var url = f.downloadUrl || attachmentInfo.shareUrl;
+                        return f.name + '（' + formatFileSize(f.size) + '）|' + url;
+                    });
+                    var fileLink = '\n📎 ' + fileParts.join('\n📎 ');
+                    messageBody += (body ? '\n' : '') + fileLink;
+                }
+
+                // 通过 ntfy JSON API 发送通知（支持中文）
+                var jsonBody = {
+                    topic: NTFY_TOPIC,
+                    message: messageBody,
+                    title: title || '通知',
+                    priority: currentPriority,
+                    tags: currentSubject ? [currentSubject] : [],
+                    click: attachmentInfo ? attachmentInfo.shareUrl : ''
+                };
+
+                var response = await fetch(NTFY_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonBody)
+                });
+
+                if (response.ok) {
+                    showStatus('发送成功 ✓', 'success');
+                    const successFiles = attachments.filter(function(a) { return a.status === 'done'; }).map(function(a) {
+                        return { name: a.file.name, downloadUrl: a.downloadUrl || a.shareUrl };
+                    });
+                    addHistory(
+                        title || '通知',
+                        body,
+                        currentPriority,
+                        successFiles
+                    );
+                    // 记录已发送通知
+                    recordSentNotification(currentSubject, title || '通知');
+                    document.getElementById('msgBody').value = '';
+                    document.getElementById('msgTitle').value = '';
+                    attachments = [];
+                    attachCounter = 0;
+                    document.getElementById('attachInput').value = '';
+                    renderAttachPreview();
+                } else {
+                    var errText = await response.text().catch(function() { return ''; });
+                    showStatus('发送失败 (' + response.status + ')', 'error');
+                    console.error('ntfy 返回错误:', response.status, errText);
+                }
+            } catch (err) {
+                document.getElementById('uploadProgress').style.display = 'none';
+                var errMsg = '网络错误，请检查网络连接';
+                if (window.location.protocol === 'file:') {
+                    errMsg = '当前通过本地文件打开，请通过 HTTP 服务器访问';
+                } else if (err.message && err.message.indexOf('CORS') !== -1) {
+                    errMsg = '跨域请求被阻止，请通过 HTTP 服务器访问';
+                } else if (err.name === 'TypeError') {
+                    errMsg = '请求被阻止，请检查网络或访问方式';
+                }
+                showStatus(errMsg, 'error');
+                console.error('发送通知错误:', err);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '📤 发送通知';
+                setTimeout(function() {
+                    statusBar.className = 'status-bar';
+                    statusBar.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        let statusTimer = null;
+
+        function showStatus(msg, type) {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.className = 'status-bar ' + type;
+            statusBar.textContent = msg;
+            // 自动消失：错误/成功3秒后消失，发送中不自动消失
+            if (statusTimer) clearTimeout(statusTimer);
+            if (type !== 'sending') {
+                statusTimer = setTimeout(function() {
+                    statusBar.className = 'status-bar';
+                    statusBar.textContent = '';
+                }, 3000);
+            }
+        }
+
+        // ============ 历史记录 ============
+        function addHistory(title, body, priority, fileObjs) {
+            const list = document.getElementById('historyList');
+            const empty = list.querySelector('.empty-history');
+            if (empty) empty.remove();
+
+            const priorityMap = {
+                1: { label: '静默', cls: 'priority-low' },
+                2: { label: '低', cls: 'priority-low' },
+                3: { label: '默认', cls: 'priority-default' },
+                4: { label: '高', cls: 'priority-high' },
+                5: { label: '紧急', cls: 'priority-urgent' }
+            };
+
+            const now = new Date();
+            const timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+            const p = priorityMap[priority] || priorityMap[3];
+
+            let html = '<div class="history-title">' +
+                escapeHtml(title) +
+                '<span class="history-priority ' + p.cls + '">' + p.label + '</span>' +
+                '</div>';
+
+            if (body) {
+                html += '<div class="history-body">' + escapeHtml(body) + '</div>';
+            }
+
+            if (fileObjs && fileObjs.length > 0) {
+                var attachParts = fileObjs.map(function(f) {
+                    if (f.downloadUrl) {
+                        return '<a href="' + escapeHtml(f.downloadUrl) + '" target="_blank" rel="noopener" style="color:#6366f1;">' + escapeHtml(f.name) + '</a>';
+                    }
+                    return escapeHtml(f.name);
+                });
+                html += '<div class="history-attach">📎 <span style="color:#eab308;">附件：</span>' + attachParts.join('、') + '</div>';
+            }
+
+            html += '<div class="history-time">' + timeStr + '</div>';
+
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = html;
+            list.insertBefore(item, list.firstChild);
+
+            while (list.children.length > 30) {
+                list.removeChild(list.lastChild);
+            }
+        }
+
+        function pad(n) {
+            return n < 10 ? '0' + n : String(n);
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // 页面加载时自动登录
+        autoLogin();
+
+        // ============ 键盘快捷键 ============
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                sendNotification();
+            }
+        });
+
+        // 更新历史弹窗
+        function showChangelog() {
+            document.getElementById('changelogOverlay').classList.remove('hidden');
+        }
+        function hideChangelog() {
+            document.getElementById('changelogOverlay').classList.add('hidden');
+        }
+        // 点击弹窗外部关闭
+        document.getElementById('changelogOverlay').addEventListener('click', function(e) {
+            if (e.target === this) hideChangelog();
+        });
+    </script>
+
+    <!-- 更新历史按钮 -->
+    <button class="changelog-btn" onclick="showChangelog()">📜 更新历史</button>
+
+    </div><!-- end main-content -->
+
+    <a href="https://www.wenjuan.com/s/UZBZJvRBgN/" target="_blank" class="feedback-btn">💬 问题反馈</a>
+
+    <!-- 版本号标注 -->
+    <div class="version-label">当前版本：v1.5.0</div>
+
+    <!-- 更新历史弹窗 -->
+    <div id="changelogOverlay" class="changelog-overlay hidden">
+        <div class="changelog-panel">
+            <h2>📜 教师端系统 — 更新历史<button class="changelog-close" onclick="hideChangelog()">&times;</button></h2>
+
+            <h3>v1.5.0</h3>
+            <ul>
+                <li>新增 Supabase 数据库存储时间表功能</li>
+                <li>首次加载优先从数据库读取当日时间表，ntfy SSE 作为实时推送备用</li>
+                <li>新增"保存至数据库"按钮，支持保存时间表并自动清理旧数据</li>
+                <li>修改请求优先写入数据库 modify_requests 表，失败时回退到 ntfy</li>
+                <li>新增待处理修改请求通知区域，每5秒自动轮询，支持"同意"和"忽略"操作</li>
+                <li>新增数据库操作实时状态提示（读取中/写入中/成功/失败）</li>
+            </ul>
+
+            <h3>v1.4.0</h3>
+            <ul>
+                <li>强制要求用户登录才能使用系统，未登录时内容被锁定并弹出登录框</li>
+                <li>注册改为用户名（必填）+ 邮箱（选填）+ 密码 + 学科</li>
+                <li>登录改为使用用户名登录</li>
+                <li>学科精简为5个：语文、数学、英语、化学、生物</li>
+                <li>密码找回改为通过邮箱查询用户名（本地模式）</li>
+            </ul>
+
+            <h3>v1.3.9</h3>
+            <ul>
+                <li>新增用户注册/登录/密码找回系统，注册时需选择任教学科，发送通知时默认选中该学科</li>
+                <li>支持 Netlify Identity 在线模式与 localStorage 离线回退模式</li>
+                <li>通过 cookie + localStorage 保存登录状态和已发送通知历史</li>
+            </ul>
+
+            <h3>v1.3.8</h3>
+            <ul>
+                <li>班级信息更新为高二（13）班</li>
+            </ul>
+
+            <h3>v1.3.7</h3>
+            <ul>
+                <li>右下角新增"问题反馈"按钮，链接指向问卷反馈</li>
+            </ul>
+
+            <h3>v1.3.6</h3>
+            <ul>
+                <li>右下角新增当前版本号标注</li>
+                <li>后续改进自动识别改动大小并更新版本号和更新历史</li>
+            </ul>
+
+            <h3>v1.3.5</h3>
+            <ul>
+                <li>科目选择联动标题自动填充</li>
+            </ul>
+
+            <h3>v1.3.4</h3>
+            <ul>
+                <li>发送前输入验证（标题和内容分别检查，任一为空即提示）</li>
+                <li>修复状态栏 display: block 不生效的问题</li>
+            </ul>
+
+            <h3>v1.3.3</h3>
+            <ul>
+                <li>通知发送状态栏 3 秒后自动消失</li>
+                <li>附件上传支持任意文件类型</li>
+            </ul>
+
+            <h3>v1.3.2</h3>
+            <ul>
+                <li>时间表视图添加独立状态栏</li>
+                <li>修复更改弹窗默认显示的问题</li>
+            </ul>
+
+            <h3>v1.3.1</h3>
+            <ul>
+                <li>弹窗编辑界面：每项作业可独立修改时间，上下移动调整顺序</li>
+            </ul>
+
+            <h3>v1.3.0</h3>
+            <ul>
+                <li>新增"更改作业安排"功能（修改各科目用时 + ↑↓ 调整作业顺序）</li>
+                <li>修改请求通过 ntfy 发送</li>
+            </ul>
+
+            <h3>v1.2.3</h3>
+            <ul>
+                <li>修复 ntfy SSE 双层 JSON 解析失败（兼容 data.message 嵌套格式）</li>
+            </ul>
+
+            <h3>v1.2.2</h3>
+            <ul>
+                <li>表格字号缩小适配手机端</li>
+                <li>时间表防止换行</li>
+            </ul>
+
+            <h3>v1.2.1</h3>
+            <ul>
+                <li>标题含当天日期（"高一（13）班x月x日晚自习作业时间表"）</li>
+            </ul>
+
+            <h3>v1.2.0</h3>
+            <ul>
+                <li>新增作业时间表实时查看</li>
+                <li>时间表表格渲染（序号、科目、开始-结束时间、用时）</li>
+            </ul>
+
+            <h3>v1.1.0</h3>
+            <ul>
+                <li>新增主界面双入口菜单（"查看晚自习作业时间表" + "发送通知至晚自习系统"）</li>
+                <li>新增页面视图切换系统（主菜单 / 时间表视图 / 通知发送视图）</li>
+                <li>页面标题统一为 "高一（13）班晚自习系统教师端"</li>
+            </ul>
+
+            <h3>v1.0.6</h3>
+            <ul>
+                <li>文件类型图标映射（PDF / Word / Excel / PPT / ZIP / TXT）</li>
+                <li>标题前添加班级图标</li>
+            </ul>
+
+            <h3>v1.0.5</h3>
+            <ul>
+                <li>删除发送历史中独立的"🔗 点击下载附件"按钮</li>
+                <li>发送历史附件改为文件名直链超链接，"附件："黄色字体</li>
+            </ul>
+
+            <h3>v1.0.4</h3>
+            <ul>
+                <li>附件下载改为 EasySend 文件直链（点击直接下载）</li>
+            </ul>
+
+            <h3>v1.0.3</h3>
+            <ul>
+                <li>批量文件选择，上传前预上传机制，上传进度条</li>
+                <li>图片预览（≤2MB 原图，>2MB 自动压缩至 1MB 以内）</li>
+            </ul>
+
+            <h3>v1.0.2</h3>
+            <ul>
+                <li>新增附件上传功能（EasySend 文件托管服务）</li>
+            </ul>
+
+            <h3>v1.0.1</h3>
+            <ul>
+                <li>发送历史记录（本地存储，最多 30 条）</li>
+                <li>键盘快捷键（Ctrl/Cmd + Enter 快速发送）</li>
+                <li>协议检测（file: 协议时显示黄色警告）</li>
+            </ul>
+
+            <h3>v1.0.0</h3>
+            <ul>
+                <li>创建教师通知发送系统</li>
+                <li>科目选择（不指定 / 语文 / 数学 / 英语 / 物理 / 化学 / 生物）</li>
+                <li>标题 + 正文输入，五级优先级选择（1 静默 ～ 5 紧急）</li>
+                <li>通过 ntfy JSON API 发送通知到晚自习系统</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

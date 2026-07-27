@@ -626,26 +626,6 @@
     </style>
 </head>
 <body>
-    <!-- 登录遮罩 -->
-    <div id="loginOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;">
-        <div style="background:#fff;border-radius:1rem;padding:2rem;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-            <h2 style="text-align:center;margin-bottom:1.5rem;color:#333;">&#x1F511; 教师端登录</h2>
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:0.85rem;font-weight:600;color:#555;margin-bottom:0.3rem;">用户名</label>
-                <input type="text" id="loginUsername" placeholder="请输入用户名" style="width:100%;padding:0.7rem;border:2px solid #e5e7eb;border-radius:0.5rem;font-size:1rem;outline:none;">
-            </div>
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:0.85rem;font-weight:600;color:#555;margin-bottom:0.3rem;">密码</label>
-                <input type="password" id="loginPassword" placeholder="请输入密码" style="width:100%;padding:0.7rem;border:2px solid #e5e7eb;border-radius:0.5rem;font-size:1rem;outline:none;">
-            </div>
-            <button onclick="doLogin()" style="width:100%;padding:0.8rem;border:none;border-radius:0.5rem;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;">登录</button>
-            <div id="loginMsg" style="text-align:center;margin-top:0.8rem;font-size:0.85rem;color:#ef4444;min-height:1.2rem;"></div>
-        </div>
-    </div>
-
-    <!-- 用户栏 -->
-    <div id="userBar" style="position:fixed;top:0.5rem;right:0.5rem;z-index:1000;background:rgba(255,255,255,0.9);padding:0.3rem 0.8rem;border-radius:2rem;font-size:0.8rem;font-weight:600;color:#555;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.1);" onclick="doLogout()">&#x1F464; 未登录</div>
-
     <!-- 页面头部标题 -->
     <div class="header">
         <h1><img src="icon.jpg" alt="" style="height:2.4em;vertical-align:middle;margin-right:0.4em;">高二（13）班晚自习系统教师端</h1>
@@ -789,62 +769,6 @@
     </div>
 
     <script>
-        // ============ Supabase 配置 ============
-        const SUPABASE_URL = 'https://wh12z213tch.pages.dev/api/supabase';
-        const SUPABASE_ANON_KEY = 'sb_publishable_x0V-7Mj0PyphcH0W2cID0A_W-yUfdME';
-
-        // Supabase REST API 通用封装
-        function sbRest(table, method, body) {
-            var url = SUPABASE_URL + '/rest/v1/' + table;
-            var opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY } };
-            if (body) opts.body = JSON.stringify(body);
-            return fetch(url, opts).then(function(r) { return r.json(); });
-        }
-        function sbGet(table, filterCol, filterVal, selectCols) {
-            var url = SUPABASE_URL + '/rest/v1/' + table + (filterCol ? '?' + filterCol + '=eq.' + encodeURIComponent(filterVal) : '');
-            if (selectCols) url += (filterCol ? '&' : '?') + 'select=' + selectCols;
-            return fetch(url, { headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY } }).then(function(r) { return r.json(); });
-        }
-        function sbInsert(table, row) {
-            return sbRest(table, 'POST', row).then(function(data) { return data && data.length > 0 ? data[0] : row; });
-        }
-
-        // SHA-256 哈希
-        async function sha256(str) {
-            var buf = new TextEncoder().encode(str);
-            var hash = await crypto.subtle.digest('SHA-256', buf);
-            return Array.from(new Uint8Array(hash)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
-        }
-
-        // 用户认证
-        var currentUser = null;
-        async function doLogin() {
-            var username = document.getElementById('loginUsername').value.trim();
-            var pw = document.getElementById('loginPassword').value;
-            var msg = document.getElementById('loginMsg');
-            if (!username || !pw) { msg.textContent = '请填写用户名和密码'; return; }
-            try {
-                var rows = await sbGet('users', null, null, 'username,password_hash,real_name,role,permissions,is_admin');
-                var u = null;
-                for (var i = 0; i < rows.length; i++) { if (rows[i].username.toLowerCase() === username.toLowerCase()) { u = rows[i]; break; } }
-                if (!u) { msg.textContent = '用户不存在'; return; }
-                var hash = await sha256(pw);
-                if (u.password_hash !== hash) { msg.textContent = '密码错误'; return; }
-                currentUser = { username: u.username, realname: u.real_name || '', role: u.role || 'teacher', permissions: u.permissions || {}, isAdmin: u.is_admin || false };
-                localStorage.setItem('tch_user', JSON.stringify(currentUser));
-                document.getElementById('loginOverlay').classList.add('hidden');
-                document.getElementById('userBar').textContent = '👤 ' + (currentUser.realname || currentUser.username);
-            } catch(e) { msg.textContent = '登录失败：' + (e.message || '网络错误'); }
-        }
-        function doLogout() {
-            currentUser = null; localStorage.removeItem('tch_user');
-            location.reload();
-        }
-        function checkAuth() {
-            var saved = localStorage.getItem('tch_user');
-            if (saved) { currentUser = JSON.parse(saved); document.getElementById('loginOverlay').classList.add('hidden'); document.getElementById('userBar').textContent = '👤 ' + (currentUser.realname || currentUser.username); }
-        }
-
         // ============ 页面切换逻辑 ============
         function showView(viewId) {
             document.getElementById('mainMenu').style.display = 'none';
@@ -1064,7 +988,6 @@
         // 页面加载时初始化
         updateScheduleTitle();
         initScheduleSubscription();
-        checkAuth();
 
         // ============ 协议检测 ============
         if (window.location.protocol === 'file:') {
